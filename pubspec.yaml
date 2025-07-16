@@ -1,0 +1,32 @@
+name: decentralized_chat
+description: A decentralized chat application.
+
+publish_to: 'none' # Remove this line if you wish to publish to pub.dev
+
+version: 1.0.0+1
+
+environment:
+  sdk: '>=2.19.2 <3.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  cupertino_icons: ^1.0.2
+  libp2p: ^0.1.0
+  steel_crypt: ^3.1.1
+  sqflite: ^2.2.4+1
+  flutter_webrtc: ^0.9.22
+  image_picker: ^0.8.7+1
+  audioplayers: ^4.0.1
+  record: ^4.4.4
+
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  flutter_lints: ^2.0.0
+
+flutter:
+  uses-material-design: true
