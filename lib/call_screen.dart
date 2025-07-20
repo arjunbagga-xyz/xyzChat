@@ -22,19 +22,23 @@ class _CallScreenState extends State<CallScreen> {
   @override
   void initState() {
     super.initState();
-    initRenderers();
-    _signaling = Signaling('ws://${widget.ip}:8080');
-    _signaling.connect();
-    _signaling.onMessage.listen((message) {
-      if (message['type'] == 'offer') {
-        _handleOffer(message);
-      } else if (message['type'] == 'answer') {
-        _handleAnswer(message);
-      } else if (message['type'] == 'candidate') {
-        _handleCandidate(message);
-      }
-    });
-    _createPeerConnection();
+    try {
+      initRenderers();
+      _signaling = Signaling('wss://${widget.ip}:8080');
+      _signaling.connect();
+      _signaling.onMessage.listen((message) {
+        if (message['type'] == 'offer') {
+          _handleOffer(message);
+        } else if (message['type'] == 'answer') {
+          _handleAnswer(message);
+        } else if (message['type'] == 'candidate') {
+          _handleCandidate(message);
+        }
+      });
+      _createPeerConnection();
+    } catch (e) {
+      _showErrorDialog(e.toString());
+    }
   }
 
   @override
@@ -47,84 +51,128 @@ class _CallScreenState extends State<CallScreen> {
   }
 
   void initRenderers() async {
-    await _localRenderer.initialize();
-    await _remoteRenderer.initialize();
+    try {
+      await _localRenderer.initialize();
+      await _remoteRenderer.initialize();
+    } catch (e) {
+      _showErrorDialog(e.toString());
+    }
   }
 
   void _createPeerConnection() async {
-    _peerConnection = await createPeerConnection({
-      'iceServers': [
-        {'urls': 'stun:stun.l.google.com:19302'},
-      ]
-    }, {
-      'optional': [
-        {'DtlsSrtpKeyAgreement': true},
-      ],
-    });
-
-    _peerConnection!.onIceCandidate = (candidate) {
-      _signaling.send({
-        'type': 'candidate',
-        'candidate': {
-          'sdpMLineIndex': candidate.sdpMLineIndex,
-          'sdpMid': candidate.sdpMid,
-          'candidate': candidate.candidate,
-        },
+    try {
+      _peerConnection = await createPeerConnection({
+        'iceServers': [
+          {'urls': 'stun:stun.l.google.com:19302'},
+        ]
+      }, {
+        'optional': [
+          {'DtlsSrtpKeyAgreement': true},
+        ],
       });
-    };
 
-    _peerConnection!.onTrack = (event) {
-      if (event.track.kind == 'video') {
-        _remoteRenderer.srcObject = event.streams[0];
-      }
-    };
+      _peerConnection!.onIceCandidate = (candidate) {
+        _signaling.send({
+          'type': 'candidate',
+          'candidate': {
+            'sdpMLineIndex': candidate.sdpMLineIndex,
+            'sdpMid': candidate.sdpMid,
+            'candidate': candidate.candidate,
+          },
+        });
+      };
 
-    final stream = await navigator.mediaDevices.getUserMedia({
-      'audio': true,
-      'video': true,
-    });
+      _peerConnection!.onTrack = (event) {
+        if (event.track.kind == 'video') {
+          _remoteRenderer.srcObject = event.streams[0];
+        }
+      };
 
-    _localRenderer.srcObject = stream;
-    stream.getTracks().forEach((track) {
-      _peerConnection!.addTrack(track, stream);
-    });
+      final stream = await navigator.mediaDevices.getUserMedia({
+        'audio': true,
+        'video': true,
+      });
+
+      _localRenderer.srcObject = stream;
+      stream.getTracks().forEach((track) {
+        _peerConnection!.addTrack(track, stream);
+      });
+    } catch (e) {
+      _showErrorDialog(e.toString());
+    }
   }
 
   void _handleOffer(Map<String, dynamic> offer) async {
-    await _peerConnection!.setRemoteDescription(
-      RTCSessionDescription(offer['sdp'], offer['type']),
-    );
-    final answer = await _peerConnection!.createAnswer({});
-    await _peerConnection!.setLocalDescription(answer);
-    _signaling.send({
-      'type': 'answer',
-      'sdp': answer.sdp,
-    });
+    try {
+      await _peerConnection!.setRemoteDescription(
+        RTCSessionDescription(offer['sdp'], offer['type']),
+      );
+      final answer = await _peerConnection!.createAnswer({});
+      await _peerConnection!.setLocalDescription(answer);
+      _signaling.send({
+        'type': 'answer',
+        'sdp': answer.sdp,
+      });
+    } catch (e) {
+      _showErrorDialog(e.toString());
+    }
   }
 
   void _handleAnswer(Map<String, dynamic> answer) {
-    _peerConnection!.setRemoteDescription(
-      RTCSessionDescription(answer['sdp'], answer['type']),
-    );
+    try {
+      _peerConnection!.setRemoteDescription(
+        RTCSessionDescription(answer['sdp'], answer['type']),
+      );
+    } catch (e) {
+      _showErrorDialog(e.toString());
+    }
   }
 
   void _handleCandidate(Map<String, dynamic> candidate) {
-    _peerConnection!.addCandidate(
-      RTCIceCandidate(
-        candidate['candidate']['candidate'],
-        candidate['candidate']['sdpMid'],
-        candidate['candidate']['sdpMLineIndex'],
-      ),
-    );
+    try {
+      _peerConnection!.addCandidate(
+        RTCIceCandidate(
+          candidate['candidate']['candidate'],
+          candidate['candidate']['sdpMid'],
+          candidate['candidate']['sdpMLineIndex'],
+        ),
+      );
+    } catch (e) {
+      _showErrorDialog(e.toString());
+    }
   }
 
   void _createOffer() async {
-    final offer = await _peerConnection!.createOffer({});
-    await _peerConnection!.setLocalDescription(offer);
-    _signaling.send({
-      'type': 'offer',
-      'sdp': offer.sdp,
-    });
+    try {
+      final offer = await _peerConnection!.createOffer({});
+      await _peerConnection!.setLocalDescription(offer);
+      _signaling.send({
+        'type': 'offer',
+        'sdp': offer.sdp,
+      });
+    } catch (e) {
+      _showErrorDialog(e.toString());
+    }
+  }
+
+  void _showErrorDialog(String message) {
+    showDialog<void>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Error'),
+          content: Text(message),
+          actions: <Widget>[
+            TextButton(
+              child: const Text('OK'),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+          ],
+        );
+      },
+    );
   }
 
   @override

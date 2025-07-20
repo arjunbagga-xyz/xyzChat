@@ -1,7 +1,14 @@
 import 'dart:io';
 
 Future<void> main() async {
-  final server = await HttpServer.bind(InternetAddress.anyIPv4, 8080);
+  final securityContext = SecurityContext()
+    ..useCertificateChain('certs/cert.pem')
+    ..usePrivateKey('certs/key.pem');
+  final server = await HttpServer.bindSecure(
+    InternetAddress.anyIPv4,
+    8080,
+    securityContext,
+  );
   print('Signaling server listening on ${server.address}:${server.port}');
 
   await for (final request in server) {

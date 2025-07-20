@@ -18,20 +18,33 @@ class Signaling {
   Signaling(this._url);
 
   Future<void> connect() async {
-    _channel = IOWebSocketChannel.connect(_url);
-    _onOpen.add(null);
-    _channel!.stream.listen((message) {
-      _onMessage.add(json.decode(message));
-    }, onDone: () {
-      _onClose.add(null);
-    });
+    try {
+      _channel = IOWebSocketChannel.connect(_url);
+      _onOpen.add(null);
+      _channel!.stream.listen((message) {
+        _onMessage.add(json.decode(message));
+      }, onDone: () {
+        _onClose.add(null);
+      });
+    } catch (e) {
+      print('Error connecting to signaling server: $e');
+      rethrow;
+    }
   }
 
   void send(dynamic message) {
-    _channel!.sink.add(json.encode(message));
+    try {
+      _channel!.sink.add(json.encode(message));
+    } catch (e) {
+      print('Error sending message to signaling server: $e');
+    }
   }
 
   Future<void> close() async {
-    await _channel?.sink.close();
+    try {
+      await _channel?.sink.close();
+    } catch (e) {
+      print('Error closing connection to signaling server: $e');
+    }
   }
 }

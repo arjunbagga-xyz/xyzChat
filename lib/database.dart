@@ -32,88 +32,127 @@ class DatabaseHelper {
   }
 
   Future<Database> _initDB(String filePath) async {
-    final dbPath = await getDatabasesPath();
-    final path = join(dbPath, filePath);
+    try {
+      final dbPath = await getDatabasesPath();
+      final path = join(dbPath, filePath);
 
-    return await openDatabase(path, version: 1, onCreate: _createDB);
+      return await openDatabase(path, version: 1, onCreate: _createDB);
+    } catch (e) {
+      print('Error initializing database: $e');
+      rethrow;
+    }
   }
 
   Future _createDB(Database db, int version) async {
-    const idType = 'INTEGER PRIMARY KEY AUTOINCREMENT';
-    const textType = 'TEXT NOT NULL';
+    try {
+      const idType = 'INTEGER PRIMARY KEY AUTOINCREMENT';
+      const textType = 'TEXT NOT NULL';
 
-    await db.execute('''
+      await db.execute('''
 CREATE TABLE contacts (
   id $idType,
   name $textType,
   peerId $textType
   )
 ''');
+    } catch (e) {
+      print('Error creating database: $e');
+      rethrow;
+    }
   }
 
   Future<Contact> create(Contact contact) async {
-    final db = await instance.database;
-    final id = await db.insert('contacts', contact.toMap());
-    return contact;
+    try {
+      final db = await instance.database;
+      final id = await db.insert('contacts', contact.toMap());
+      return contact;
+    } catch (e) {
+      print('Error creating contact: $e');
+      rethrow;
+    }
   }
 
   Future<Contact> readContact(int id) async {
-    final db = await instance.database;
+    try {
+      final db = await instance.database;
 
-    final maps = await db.query(
-      'contacts',
-      columns: ['id', 'name', 'peerId'],
-      where: 'id = ?',
-      whereArgs: [id],
-    );
-
-    if (maps.isNotEmpty) {
-      return Contact(
-        id: maps.first['id'] as int,
-        name: maps.first['name'] as String,
-        peerId: maps.first['peerId'] as String,
+      final maps = await db.query(
+        'contacts',
+        columns: ['id', 'name', 'peerId'],
+        where: 'id = ?',
+        whereArgs: [id],
       );
-    } else {
-      throw Exception('ID $id not found');
+
+      if (maps.isNotEmpty) {
+        return Contact(
+          id: maps.first['id'] as int,
+          name: maps.first['name'] as String,
+          peerId: maps.first['peerId'] as String,
+        );
+      } else {
+        throw Exception('ID $id not found');
+      }
+    } catch (e) {
+      print('Error reading contact: $e');
+      rethrow;
     }
   }
 
   Future<List<Contact>> readAllContacts() async {
-    final db = await instance.database;
+    try {
+      final db = await instance.database;
 
-    final result = await db.query('contacts');
+      final result = await db.query('contacts');
 
-    return result.map((json) => Contact(
-      id: json['id'] as int,
-      name: json['name'] as String,
-      peerId: json['peerId'] as String,
-    )).toList();
+      return result.map((json) => Contact(
+        id: json['id'] as int,
+        name: json['name'] as String,
+        peerId: json['peerId'] as String,
+      )).toList();
+    } catch (e) {
+      print('Error reading all contacts: $e');
+      rethrow;
+    }
   }
 
   Future<int> update(Contact contact) async {
-    final db = await instance.database;
+    try {
+      final db = await instance.database;
 
-    return db.update(
-      'contacts',
-      contact.toMap(),
-      where: 'id = ?',
-      whereArgs: [contact.id],
-    );
+      return db.update(
+        'contacts',
+        contact.toMap(),
+        where: 'id = ?',
+        whereArgs: [contact.id],
+      );
+    } catch (e) {
+      print('Error updating contact: $e');
+      rethrow;
+    }
   }
 
   Future<int> delete(int id) async {
-    final db = await instance.database;
+    try {
+      final db = await instance.database;
 
-    return await db.delete(
-      'contacts',
-      where: 'id = ?',
-      whereArgs: [id],
-    );
+      return await db.delete(
+        'contacts',
+        where: 'id = ?',
+        whereArgs: [id],
+      );
+    } catch (e) {
+      print('Error deleting contact: $e');
+      rethrow;
+    }
   }
 
   Future close() async {
-    final db = await instance.database;
+    try {
+      final db = await instance.database;
 
-    db.close();
+      db.close();
+    } catch (e) {
+      print('Error closing database: $e');
+    }
   }
 }

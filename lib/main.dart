@@ -8,9 +8,13 @@ import 'package:decentralized_chat/network.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:record/record.dart';
 import 'package:audioplayers/audioplayers.dart';
+import 'package:steel_crypt/steel_crypt.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  FlutterError.onError = (details) {
+    print(details);
+  };
   runApp(const MyApp());
 }
 
@@ -48,23 +52,37 @@ class _MyHomePageState extends State<MyHomePage> {
   final audioPlayer = AudioPlayer();
   bool _isRecording = false;
   String? _audioPath;
+  String _username = 'user';
+  final _crypt = Cryptor(algo: Algo.aes, key: 'a' * 32, iv: 'b' * 16);
 
   @override
   void initState() {
     super.initState();
-    network.start();
-    network.subscribe('chat');
-    network.messages.listen((message) {
-      setState(() {
-        _messages.add(message);
+    try {
+      network.start();
+      network.subscribe('chat');
+      network.messages.listen((message) {
+        setState(() {
+          _messages.add(_decryptMessage(message));
+        });
       });
-    });
+    } catch (e) {
+      _showErrorDialog(e.toString());
+    }
   }
 
   @override
   void dispose() {
     network.stop();
     super.dispose();
+  }
+
+  String _encryptMessage(String message) {
+    return _crypt.encrypt(inp: '$_username: $message');
+  }
+
+  String _decryptMessage(String message) {
+    return _crypt.decrypt(enc: message);
   }
 
   @override
@@ -111,7 +129,11 @@ class _MyHomePageState extends State<MyHomePage> {
                       trailing: IconButton(
                         icon: const Icon(Icons.play_arrow),
                         onPressed: () {
-                          audioPlayer.play(DeviceFileSource(message.path));
+                          try {
+                            audioPlayer.play(DeviceFileSource(message.path));
+                          } catch (e) {
+                            _showErrorDialog(e.toString());
+                          }
                         },
                       ),
                     );
@@ -131,31 +153,39 @@ class _MyHomePageState extends State<MyHomePage> {
                 IconButton(
                   icon: const Icon(Icons.photo),
                   onPressed: () async {
-                    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
-                    if (pickedFile != null) {
-                      final file = File(pickedFile.path);
-                      // TODO: Select a peer to send the file to
-                      // await network.sendFile(network.peerId, file);
+                    try {
+                      final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+                      if (pickedFile != null) {
+                        final file = File(pickedFile.path);
+                        // TODO: Select a peer to send the file to
+                        // await network.sendFile(network.peerId, file);
+                      }
+                    } catch (e) {
+                      _showErrorDialog(e.toString());
                     }
                   },
                 ),
                 IconButton(
                   icon: Icon(_isRecording ? Icons.stop : Icons.mic),
                   onPressed: () async {
-                    if (await record.isRecording()) {
-                      final path = await record.stop();
-                      setState(() {
-                        _isRecording = false;
-                        _audioPath = path;
-                        _messages.add(File(path!));
-                      });
-                    } else {
-                      if (await record.hasPermission()) {
-                        await record.start();
+                    try {
+                      if (await record.isRecording()) {
+                        final path = await record.stop();
                         setState(() {
-                          _isRecording = true;
+                          _isRecording = false;
+                          _audioPath = path;
+                          _messages.add(File(path!));
                         });
+                      } else {
+                        if (await record.hasPermission()) {
+                          await record.start();
+                          setState(() {
+                            _isRecording = true;
+                          });
+                        }
                       }
+                    } catch (e) {
+                      _showErrorDialog(e.toString());
                     }
                   },
                 ),
@@ -170,8 +200,12 @@ class _MyHomePageState extends State<MyHomePage> {
                 IconButton(
                   icon: const Icon(Icons.send),
                   onPressed: () {
-                    network.publish('chat', _messageController.text);
-                    _messageController.clear();
+                    try {
+                      network.publish('chat', _encryptMessage(_messageController.text));
+                      _messageController.clear();
+                    } catch (e) {
+                      _showErrorDialog(e.toString());
+                    }
                   },
                 ),
               ],
@@ -218,13 +252,37 @@ class _MyHomePageState extends State<MyHomePage> {
             TextButton(
               child: const Text('Add'),
               onPressed: () async {
-                await dbHelper.create(
-                  Contact(
-                    id: 0, // The database will assign an ID
-                    name: nameController.text,
-                    peerId: peerIdController.text,
-                  ),
-                );
+                try {
+                  await dbHelper.create(
+                    Contact(
+                      id: 0, // The database will assign an ID
+                      name: nameController.text,
+                      peerId: peerIdController.text,
+                    ),
+                  );
+                  Navigator.of(context).pop();
+                } catch (e) {
+                  _showErrorDialog(e.toString());
+                }
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showErrorDialog(String message) {
+    showDialog<void>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Error'),
+          content: Text(message),
+          actions: <Widget>[
+            TextButton(
+              child: const Text('OK'),
+              onPressed: () {
                 Navigator.of(context).pop();
               },
             ),
