@@ -3,6 +3,8 @@ import 'dart:io';
 import 'package:decentralized_chat/call_screen.dart';
 import 'package:decentralized_chat/chat_bubble.dart';
 import 'package:decentralized_chat/contacts_screen.dart';
+import 'package:decentralized_chat/groups_screen.dart';
+import 'package:decentralized_chat/settings_screen.dart';
 import 'package:decentralized_chat/theme.dart';
 import 'package:flutter/material.dart';
 import 'package:decentralized_chat/database.dart';
@@ -33,10 +35,9 @@ class MyApp extends StatefulWidget {
 class _MyAppState extends State<MyApp> {
   ThemeMode _themeMode = ThemeMode.light;
 
-  void _toggleTheme() {
+  void _onThemeModeChanged(ThemeMode themeMode) {
     setState(() {
-      _themeMode =
-          _themeMode == ThemeMode.light ? ThemeMode.dark : ThemeMode.light;
+      _themeMode = themeMode;
     });
   }
 
@@ -49,17 +50,24 @@ class _MyAppState extends State<MyApp> {
       themeMode: _themeMode,
       home: MyHomePage(
         title: 'Decentralized Chat',
-        onToggleTheme: _toggleTheme,
+        themeMode: _themeMode,
+        onThemeModeChanged: _onThemeModeChanged,
       ),
     );
   }
 }
 
 class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key, required this.title, required this.onToggleTheme});
+  const MyHomePage({
+    super.key,
+    required this.title,
+    required this.themeMode,
+    required this.onThemeModeChanged,
+  });
 
   final String title;
-  final VoidCallback onToggleTheme;
+  final ThemeMode themeMode;
+  final ValueChanged<ThemeMode> onThemeModeChanged;
 
   @override
   State<MyHomePage> createState() => _MyHomePageState();
@@ -67,7 +75,9 @@ class MyHomePage extends StatefulWidget {
 
 class _MyHomePageState extends State<MyHomePage> {
   final TextEditingController _messageController = TextEditingController();
+  final TextEditingController _searchController = TextEditingController();
   final List<Map<String, dynamic>> _messages = [];
+  List<Map<String, dynamic>> _filteredMessages = [];
   final dbHelper = DatabaseHelper.instance;
   final network = Network();
   final picker = ImagePicker();
@@ -81,6 +91,10 @@ class _MyHomePageState extends State<MyHomePage> {
   @override
   void initState() {
     super.initState();
+    _filteredMessages = _messages;
+    _searchController.addListener(() {
+      filterMessages();
+    });
     try {
       network.start();
       network.subscribe('chat');
@@ -105,6 +119,21 @@ class _MyHomePageState extends State<MyHomePage> {
   void dispose() {
     network.stop();
     super.dispose();
+  }
+
+  void filterMessages() {
+    final query = _searchController.text;
+    if (query.isNotEmpty) {
+      setState(() {
+        _filteredMessages = _messages.where((message) {
+          return message['text'].toString().toLowerCase().contains(query.toLowerCase());
+        }).toList();
+      });
+    } else {
+      setState(() {
+        _filteredMessages = _messages;
+      });
+    }
   }
 
   String _encryptMessage(String message) {
@@ -145,8 +174,27 @@ class _MyHomePageState extends State<MyHomePage> {
           elevation: 0,
           actions: [
             IconButton(
-              icon: const Icon(Icons.brightness_6),
-              onPressed: widget.onToggleTheme,
+              icon: const Icon(Icons.settings),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => SettingsScreen(
+                      themeMode: widget.themeMode,
+                      onThemeModeChanged: widget.onThemeModeChanged,
+                    ),
+                  ),
+                );
+              },
+            ),
+            IconButton(
+              icon: const Icon(Icons.group),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const GroupsScreen()),
+                );
+              },
             ),
             IconButton(
               icon: const Icon(Icons.call),
@@ -170,11 +218,24 @@ class _MyHomePageState extends State<MyHomePage> {
         ),
         body: Column(
           children: [
+            Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: TextField(
+                controller: _searchController,
+                decoration: InputDecoration(
+                  hintText: 'Search...',
+                  prefixIcon: const Icon(Icons.search),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                ),
+              ),
+            ),
             Expanded(
               child: ListView.builder(
-                itemCount: _messages.length,
+                itemCount: _filteredMessages.length,
                 itemBuilder: (context, index) {
-                  final message = _messages[index];
+                  final message = _filteredMessages[index];
                   if (message['text'] is String) {
                     return ChatBubble(
                       message: message['text'],
