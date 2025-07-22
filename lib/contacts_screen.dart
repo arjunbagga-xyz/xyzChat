@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:decentralized_chat/database.dart';
 
@@ -33,6 +35,14 @@ class _ContactsScreenState extends State<ContactsScreen> {
               itemBuilder: (context, index) {
                 final contact = snapshot.data![index];
                 return ListTile(
+                  leading: CircleAvatar(
+                    backgroundImage: contact.profilePicture != null
+                        ? FileImage(File(contact.profilePicture!))
+                        : null,
+                    child: contact.profilePicture == null
+                        ? const Icon(Icons.person)
+                        : null,
+                  ),
                   title: Text(contact.name),
                   subtitle: Text(contact.peerId),
                 );

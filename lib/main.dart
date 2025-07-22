@@ -1,14 +1,19 @@
 import 'dart:io';
 
 import 'package:decentralized_chat/call_screen.dart';
+import 'package:decentralized_chat/chat_bubble.dart';
 import 'package:decentralized_chat/contacts_screen.dart';
+import 'package:decentralized_chat/theme.dart';
 import 'package:flutter/material.dart';
 import 'package:decentralized_chat/database.dart';
 import 'package:decentralized_chat/network.dart';
+import 'package:flutter_animate/flutter_animate.dart';
+import 'package:glass_kit/glass_kit.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:record/record.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:steel_crypt/steel_crypt.dart';
+import 'package:intl/intl.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -18,25 +23,43 @@ void main() async {
   runApp(const MyApp());
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {
   const MyApp({super.key});
+
+  @override
+  _MyAppState createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
+  ThemeMode _themeMode = ThemeMode.light;
+
+  void _toggleTheme() {
+    setState(() {
+      _themeMode =
+          _themeMode == ThemeMode.light ? ThemeMode.dark : ThemeMode.light;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Decentralized Chat',
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
+      theme: AppTheme.light,
+      darkTheme: AppTheme.dark,
+      themeMode: _themeMode,
+      home: MyHomePage(
+        title: 'Decentralized Chat',
+        onToggleTheme: _toggleTheme,
       ),
-      home: const MyHomePage(title: 'Decentralized Chat'),
     );
   }
 }
 
 class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key, required this.title});
+  const MyHomePage({super.key, required this.title, required this.onToggleTheme});
 
   final String title;
+  final VoidCallback onToggleTheme;
 
   @override
   State<MyHomePage> createState() => _MyHomePageState();
@@ -44,7 +67,7 @@ class MyHomePage extends StatefulWidget {
 
 class _MyHomePageState extends State<MyHomePage> {
   final TextEditingController _messageController = TextEditingController();
-  final List<dynamic> _messages = [];
+  final List<Map<String, dynamic>> _messages = [];
   final dbHelper = DatabaseHelper.instance;
   final network = Network();
   final picker = ImagePicker();
@@ -63,7 +86,14 @@ class _MyHomePageState extends State<MyHomePage> {
       network.subscribe('chat');
       network.messages.listen((message) {
         setState(() {
-          _messages.add(_decryptMessage(message));
+          final decryptedMessage = _decryptMessage(message);
+          final sender = decryptedMessage.split(': ')[0];
+          final text = decryptedMessage.split(': ')[1];
+          _messages.add({
+            'text': text,
+            'isMe': sender == _username,
+            'timestamp': DateTime.now(),
+          });
         });
       });
     } catch (e) {
@@ -87,135 +117,158 @@ class _MyHomePageState extends State<MyHomePage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(widget.title),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.call),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const CallScreen(ip: "127.0.0.1")),
-              );
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.contacts),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const ContactsScreen()),
-              );
-            },
-          ),
+    return GlassContainer(
+      height: double.infinity,
+      width: double.infinity,
+      gradient: LinearGradient(
+        colors: [
+          Theme.of(context).colorScheme.primary.withOpacity(0.2),
+          Theme.of(context).colorScheme.secondary.withOpacity(0.2),
         ],
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
       ),
-      body: Column(
-        children: [
-          Expanded(
-            child: ListView.builder(
-              itemCount: _messages.length,
-              itemBuilder: (context, index) {
-                final message = _messages[index];
-                if (message is String) {
-                  return ListTile(
-                    title: Text(message),
-                  );
-                } else if (message is File) {
-                  if (message.path.endsWith('.m4a')) {
-                    return ListTile(
-                      title: Text(message.path.split('/').last),
-                      trailing: IconButton(
-                        icon: const Icon(Icons.play_arrow),
-                        onPressed: () {
-                          try {
-                            audioPlayer.play(DeviceFileSource(message.path));
-                          } catch (e) {
-                            _showErrorDialog(e.toString());
-                          }
-                        },
-                      ),
-                    );
-                  }
-                  return ListTile(
-                    title: Image.file(message),
-                  );
-                }
-                return Container();
+      borderGradient: LinearGradient(
+        colors: [
+          Theme.of(context).colorScheme.primary.withOpacity(0.5),
+          Theme.of(context).colorScheme.secondary.withOpacity(0.5),
+        ],
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+      ),
+      blur: 15,
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        appBar: AppBar(
+          title: Text(widget.title),
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.brightness_6),
+              onPressed: widget.onToggleTheme,
+            ),
+            IconButton(
+              icon: const Icon(Icons.call),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const CallScreen(ip: "127.0.0.1")),
+                );
               },
             ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: Row(
-              children: [
-                IconButton(
-                  icon: const Icon(Icons.photo),
-                  onPressed: () async {
-                    try {
-                      final pickedFile = await picker.pickImage(source: ImageSource.gallery);
-                      if (pickedFile != null) {
-                        final file = File(pickedFile.path);
-                        // TODO: Select a peer to send the file to
-                        // await network.sendFile(network.peerId, file);
-                      }
-                    } catch (e) {
-                      _showErrorDialog(e.toString());
-                    }
-                  },
-                ),
-                IconButton(
-                  icon: Icon(_isRecording ? Icons.stop : Icons.mic),
-                  onPressed: () async {
-                    try {
-                      if (await record.isRecording()) {
-                        final path = await record.stop();
-                        setState(() {
-                          _isRecording = false;
-                          _audioPath = path;
-                          _messages.add(File(path!));
-                        });
-                      } else {
-                        if (await record.hasPermission()) {
-                          await record.start();
-                          setState(() {
-                            _isRecording = true;
-                          });
+            IconButton(
+              icon: const Icon(Icons.contacts),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const ContactsScreen()),
+                );
+              },
+            ),
+          ],
+        ),
+        body: Column(
+          children: [
+            Expanded(
+              child: ListView.builder(
+                itemCount: _messages.length,
+                itemBuilder: (context, index) {
+                  final message = _messages[index];
+                  if (message['text'] is String) {
+                    return ChatBubble(
+                      message: message['text'],
+                      isMe: message['isMe'],
+                      timestamp: message['timestamp'],
+                    ).animate().fade().slide();
+                  }
+                  return Container();
+                },
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Row(
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.photo),
+                    onPressed: () async {
+                      try {
+                        final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+                        if (pickedFile != null) {
+                          final file = File(pickedFile.path);
+                          // TODO: Select a peer to send the file to
+                          // await network.sendFile(network.peerId, file);
                         }
+                      } catch (e) {
+                        _showErrorDialog(e.toString());
                       }
-                    } catch (e) {
-                      _showErrorDialog(e.toString());
-                    }
-                  },
-                ),
-                Expanded(
-                  child: TextField(
-                    controller: _messageController,
-                    decoration: const InputDecoration(
-                      hintText: 'Enter a message',
+                    },
+                  ),
+                  IconButton(
+                    icon: Icon(_isRecording ? Icons.stop : Icons.mic),
+                    onPressed: () async {
+                      try {
+                        if (await record.isRecording()) {
+                          final path = await record.stop();
+                          setState(() {
+                            _isRecording = false;
+                            _audioPath = path;
+                            _messages.add({
+                              'text': File(path!),
+                              'isMe': true,
+                              'timestamp': DateTime.now(),
+                            });
+                          });
+                        } else {
+                          if (await record.hasPermission()) {
+                            await record.start();
+                            setState(() {
+                              _isRecording = true;
+                            });
+                          }
+                        }
+                      } catch (e) {
+                        _showErrorDialog(e.toString());
+                      }
+                    },
+                  ),
+                  Expanded(
+                    child: TextField(
+                      controller: _messageController,
+                      decoration: const InputDecoration(
+                        hintText: 'Enter a message',
+                      ),
                     ),
                   ),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.send),
-                  onPressed: () {
-                    try {
-                      network.publish('chat', _encryptMessage(_messageController.text));
-                      _messageController.clear();
-                    } catch (e) {
-                      _showErrorDialog(e.toString());
-                    }
-                  },
-                ),
-              ],
+                  IconButton(
+                    icon: const Icon(Icons.send),
+                    onPressed: () {
+                      try {
+                        final message = _messageController.text;
+                        network.publish('chat', _encryptMessage(message));
+                        setState(() {
+                          _messages.add({
+                            'text': message,
+                            'isMe': true,
+                            'timestamp': DateTime.now(),
+                          });
+                        });
+                        _messageController.clear();
+                      } catch (e) {
+                        _showErrorDialog(e.toString());
+                      }
+                    },
+                  ),
+                ],
+              ),
             ),
-          ),
-        ],
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _showAddContactDialog(context),
-        child: const Icon(Icons.add),
+          ],
+        ),
+        floatingActionButton: FloatingActionButton(
+          onPressed: () => _showAddContactDialog(context),
+          child: const Icon(Icons.add),
+        ),
       ),
     );
   }
@@ -223,6 +276,7 @@ class _MyHomePageState extends State<MyHomePage> {
   Future<void> _showAddContactDialog(BuildContext context) async {
     final nameController = TextEditingController();
     final peerIdController = TextEditingController();
+    XFile? profilePicture;
 
     return showDialog<void>(
       context: context,
@@ -239,6 +293,12 @@ class _MyHomePageState extends State<MyHomePage> {
               TextField(
                 controller: peerIdController,
                 decoration: const InputDecoration(hintText: 'Peer ID'),
+              ),
+              TextButton(
+                onPressed: () async {
+                  profilePicture = await picker.pickImage(source: ImageSource.gallery);
+                },
+                child: const Text('Select Profile Picture'),
               ),
             ],
           ),
@@ -258,6 +318,7 @@ class _MyHomePageState extends State<MyHomePage> {
                       id: 0, // The database will assign an ID
                       name: nameController.text,
                       peerId: peerIdController.text,
+                      profilePicture: profilePicture?.path,
                     ),
                   );
                   Navigator.of(context).pop();

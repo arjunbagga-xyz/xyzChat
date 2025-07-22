@@ -5,14 +5,16 @@ class Contact {
   final int id;
   final String name;
   final String peerId;
+  final String? profilePicture;
 
-  Contact({required this.id, required this.name, required this.peerId});
+  Contact({required this.id, required this.name, required this.peerId, this.profilePicture});
 
   Map<String, dynamic> toMap() {
     return {
       'id': id,
       'name': name,
       'peerId': peerId,
+      'profilePicture': profilePicture,
     };
   }
 }
@@ -47,12 +49,14 @@ class DatabaseHelper {
     try {
       const idType = 'INTEGER PRIMARY KEY AUTOINCREMENT';
       const textType = 'TEXT NOT NULL';
+      const nullableTextType = 'TEXT';
 
       await db.execute('''
 CREATE TABLE contacts (
   id $idType,
   name $textType,
-  peerId $textType
+  peerId $textType,
+  profilePicture $nullableTextType
   )
 ''');
     } catch (e) {
@@ -78,7 +82,7 @@ CREATE TABLE contacts (
 
       final maps = await db.query(
         'contacts',
-        columns: ['id', 'name', 'peerId'],
+        columns: ['id', 'name', 'peerId', 'profilePicture'],
         where: 'id = ?',
         whereArgs: [id],
       );
@@ -88,6 +92,7 @@ CREATE TABLE contacts (
           id: maps.first['id'] as int,
           name: maps.first['name'] as String,
           peerId: maps.first['peerId'] as String,
+          profilePicture: maps.first['profilePicture'] as String?,
         );
       } else {
         throw Exception('ID $id not found');
@@ -108,6 +113,7 @@ CREATE TABLE contacts (
         id: json['id'] as int,
         name: json['name'] as String,
         peerId: json['peerId'] as String,
+        profilePicture: json['profilePicture'] as String?,
       )).toList();
     } catch (e) {
       print('Error reading all contacts: $e');
