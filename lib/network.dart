@@ -81,7 +81,7 @@ class Network {
   void subscribe(String topic) {
     try {
       _node.pubsub.subscribe(topic);
-      _node.pubsub.stream.listen((message) {
+      _node.pubsub.stream.where((message) => message.topicIDs.contains(topic)).listen((message) {
         _messageController.add(utf8.decode(message.data));
       });
     } catch (e) {
