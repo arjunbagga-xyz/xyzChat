@@ -6,26 +6,26 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 version: 1.0.0+1
 
 environment:
-  sdk: '>=2.19.2 <3.0.0'
+  sdk: '>=3.0.0 <4.0.0'
 
 dependencies:
   flutter:
     sdk: flutter
 
-  cupertino_icons: ^1.0.2
-  libp2p: ^0.1.0
-  steel_crypt: ^3.1.1
-  sqflite: ^2.2.4+1
-  flutter_webrtc: ^0.9.22
-  image_picker: ^0.8.7+1
-  audioplayers: ^4.0.1
-  record: ^4.4.4
-  intl: ^0.18.0
+  cupertino_icons: ^1.0.6
+  libp2p: ^0.2.0
+  steel_crypt: ^4.0.0
+  sqflite: ^2.3.0
+  flutter_webrtc: ^0.9.46
+  image_picker: ^1.0.4
+  audioplayers: ^5.2.1
+  record: ^5.0.1
+  intl: ^0.18.1
   glass_kit: ^2.0.1
-  flutter_animate: ^4.1.1+1
-  animations: ^2.0.7
+  flutter_animate: ^4.3.0
+  animations: ^2.0.8
   flutter_staggered_animations: ^1.1.1
-  flutter_speed_dial: ^6.2.0
+  flutter_speed_dial: ^7.0.0
   flutter_animator: ^3.2.2
 
 
