@@ -106,7 +106,6 @@ class _MyHomePageState extends State<MyHomePage> {
     });
     try {
       network.start();
-      network.subscribe('chat');
       network.messages.listen((message) {
         setState(() {
           final decryptedMessage = _decryptMessage(message);
@@ -330,7 +329,7 @@ class _MyHomePageState extends State<MyHomePage> {
                         _sendButtonKey.currentState?.forward();
                         try {
                           final message = _messageController.text;
-                          network.publish('chat', _encryptMessage(message));
+                          network.broadcast(_encryptMessage(message));
                           setState(() {
                             _messages.add({
                               'text': message,

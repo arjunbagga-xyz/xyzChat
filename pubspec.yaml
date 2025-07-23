@@ -13,7 +13,6 @@ dependencies:
     sdk: flutter
 
   cupertino_icons: ^1.0.6
-  libp2p: ^0.2.0
   steel_crypt: ^4.0.0
   sqflite: ^2.3.0
   flutter_webrtc: ^0.9.46
@@ -27,6 +26,7 @@ dependencies:
   flutter_staggered_animations: ^1.1.1
   flutter_speed_dial: ^7.0.0
   flutter_animator: ^3.2.2
+  p2plib: ^0.1.1
 
 
 dev_dependencies:
