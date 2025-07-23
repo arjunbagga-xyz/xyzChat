@@ -361,14 +361,11 @@ class _MyHomePageState extends State<MyHomePage> {
             SpeedDialChild(
               child: const Icon(Icons.group_add),
               label: 'Create Group',
-              onTap: () async {
-                final newGroup = await Navigator.push<Group>(
+              onTap: () {
+                Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => const CreateGroupScreen()),
+                  CustomPageTransition(page: const CreateGroupScreen()),
                 );
-                if (newGroup != null) {
-                  // TODO: Add group to database
-                }
               },
             ),
           ],

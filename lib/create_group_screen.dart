@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:decentralized_chat/group.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -65,10 +67,4 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
       ),
     );
   }
-}
-
-//Create a temporary File class to avoid errors
-class File {
-  final String path;
-  File(this.path);
 }

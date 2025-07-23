@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:decentralized_chat/create_group_screen.dart';
 import 'package:decentralized_chat/group.dart';
 import 'package:decentralized_chat/group_chat_screen.dart';
@@ -73,10 +75,4 @@ class _GroupsScreenState extends State<GroupsScreen> {
       ),
     );
   }
-}
-
-//Create a temporary File class to avoid errors
-class File {
-  final String path;
-  File(this.path);
 }
