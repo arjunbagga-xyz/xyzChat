@@ -23,6 +23,10 @@ dependencies:
   intl: ^0.18.0
   glass_kit: ^2.0.1
   flutter_animate: ^4.1.1+1
+  animations: ^2.0.7
+  flutter_staggered_animations: ^1.1.1
+  flutter_speed_dial: ^6.2.0
+  flutter_animator: ^3.2.2
 
 
 dev_dependencies:

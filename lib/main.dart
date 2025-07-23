@@ -3,19 +3,26 @@ import 'dart:io';
 import 'package:decentralized_chat/call_screen.dart';
 import 'package:decentralized_chat/chat_bubble.dart';
 import 'package:decentralized_chat/contacts_screen.dart';
+import 'package:decentralized_chat/create_group_screen.dart';
 import 'package:decentralized_chat/groups_screen.dart';
 import 'package:decentralized_chat/settings_screen.dart';
 import 'package:decentralized_chat/theme.dart';
+import 'package:decentralized_chat/transitions.dart';
 import 'package:flutter/material.dart';
 import 'package:decentralized_chat/database.dart';
 import 'package:decentralized_chat/network.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:flutter_animator/flutter_animator.dart';
+import 'package:flutter_speed_dial/flutter_speed_dial.dart';
+import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 import 'package:glass_kit/glass_kit.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:record/record.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:steel_crypt/steel_crypt.dart';
 import 'package:intl/intl.dart';
+
+import 'group.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -87,6 +94,8 @@ class _MyHomePageState extends State<MyHomePage> {
   String? _audioPath;
   String _username = 'user';
   final _crypt = Cryptor(algo: Algo.aes, key: 'a' * 32, iv: 'b' * 16);
+  final GlobalKey<AnimatorWidgetState> _sendButtonKey =
+      GlobalKey<AnimatorWidgetState>();
 
   @override
   void initState() {
@@ -178,8 +187,8 @@ class _MyHomePageState extends State<MyHomePage> {
               onPressed: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(
-                    builder: (context) => SettingsScreen(
+                  CustomPageTransition(
+                    page: SettingsScreen(
                       themeMode: widget.themeMode,
                       onThemeModeChanged: widget.onThemeModeChanged,
                     ),
@@ -192,7 +201,7 @@ class _MyHomePageState extends State<MyHomePage> {
               onPressed: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => const GroupsScreen()),
+                  CustomPageTransition(page: const GroupsScreen()),
                 );
               },
             ),
@@ -201,7 +210,7 @@ class _MyHomePageState extends State<MyHomePage> {
               onPressed: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => const CallScreen(ip: "127.0.0.1")),
+                  CustomPageTransition(page: const CallScreen(ip: "127.0.0.1")),
                 );
               },
             ),
@@ -210,7 +219,7 @@ class _MyHomePageState extends State<MyHomePage> {
               onPressed: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => const ContactsScreen()),
+                  CustomPageTransition(page: const ContactsScreen()),
                 );
               },
             ),
@@ -232,19 +241,30 @@ class _MyHomePageState extends State<MyHomePage> {
               ),
             ),
             Expanded(
-              child: ListView.builder(
-                itemCount: _filteredMessages.length,
-                itemBuilder: (context, index) {
-                  final message = _filteredMessages[index];
-                  if (message['text'] is String) {
-                    return ChatBubble(
-                      message: message['text'],
-                      isMe: message['isMe'],
-                      timestamp: message['timestamp'],
-                    ).animate().fade().slide();
-                  }
-                  return Container();
-                },
+              child: AnimationLimiter(
+                child: ListView.builder(
+                  itemCount: _filteredMessages.length,
+                  itemBuilder: (context, index) {
+                    final message = _filteredMessages[index];
+                    if (message['text'] is String) {
+                      return AnimationConfiguration.staggeredList(
+                        position: index,
+                        duration: const Duration(milliseconds: 375),
+                        child: SlideAnimation(
+                          verticalOffset: 50.0,
+                          child: FadeInAnimation(
+                            child: ChatBubble(
+                              message: message['text'],
+                              isMe: message['isMe'],
+                              timestamp: message['timestamp'],
+                            ),
+                          ),
+                        ),
+                      );
+                    }
+                    return Container();
+                  },
+                ),
               ),
             ),
             Padding(
@@ -302,33 +322,56 @@ class _MyHomePageState extends State<MyHomePage> {
                       ),
                     ),
                   ),
-                  IconButton(
-                    icon: const Icon(Icons.send),
-                    onPressed: () {
-                      try {
-                        final message = _messageController.text;
-                        network.publish('chat', _encryptMessage(message));
-                        setState(() {
-                          _messages.add({
-                            'text': message,
-                            'isMe': true,
-                            'timestamp': DateTime.now(),
+                  Swing(
+                    key: _sendButtonKey,
+                    child: IconButton(
+                      icon: const Icon(Icons.send),
+                      onPressed: () {
+                        _sendButtonKey.currentState?.forward();
+                        try {
+                          final message = _messageController.text;
+                          network.publish('chat', _encryptMessage(message));
+                          setState(() {
+                            _messages.add({
+                              'text': message,
+                              'isMe': true,
+                              'timestamp': DateTime.now(),
+                            });
                           });
-                        });
-                        _messageController.clear();
-                      } catch (e) {
-                        _showErrorDialog(e.toString());
-                      }
-                    },
+                          _messageController.clear();
+                        } catch (e) {
+                          _showErrorDialog(e.toString());
+                        }
+                      },
+                    ),
                   ),
                 ],
               ),
             ),
           ],
         ),
-        floatingActionButton: FloatingActionButton(
-          onPressed: () => _showAddContactDialog(context),
-          child: const Icon(Icons.add),
+        floatingActionButton: SpeedDial(
+          animatedIcon: AnimatedIcons.menu_close,
+          children: [
+            SpeedDialChild(
+              child: const Icon(Icons.person_add),
+              label: 'Add Contact',
+              onTap: () => _showAddContactDialog(context),
+            ),
+            SpeedDialChild(
+              child: const Icon(Icons.group_add),
+              label: 'Create Group',
+              onTap: () async {
+                final newGroup = await Navigator.push<Group>(
+                  context,
+                  MaterialPageRoute(builder: (context) => const CreateGroupScreen()),
+                );
+                if (newGroup != null) {
+                  // TODO: Add group to database
+                }
+              },
+            ),
+          ],
         ),
       ),
     );

@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:decentralized_chat/database.dart';
+import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 
 class ContactsScreen extends StatefulWidget {
   const ContactsScreen({super.key});
@@ -30,23 +31,34 @@ class _ContactsScreenState extends State<ContactsScreen> {
         future: _contacts,
         builder: (context, snapshot) {
           if (snapshot.hasData) {
-            return ListView.builder(
-              itemCount: snapshot.data!.length,
-              itemBuilder: (context, index) {
-                final contact = snapshot.data![index];
-                return ListTile(
-                  leading: CircleAvatar(
-                    backgroundImage: contact.profilePicture != null
-                        ? FileImage(File(contact.profilePicture!))
-                        : null,
-                    child: contact.profilePicture == null
-                        ? const Icon(Icons.person)
-                        : null,
-                  ),
-                  title: Text(contact.name),
-                  subtitle: Text(contact.peerId),
-                );
-              },
+            return AnimationLimiter(
+              child: ListView.builder(
+                itemCount: snapshot.data!.length,
+                itemBuilder: (context, index) {
+                  final contact = snapshot.data![index];
+                  return AnimationConfiguration.staggeredList(
+                    position: index,
+                    duration: const Duration(milliseconds: 375),
+                    child: SlideAnimation(
+                      verticalOffset: 50.0,
+                      child: FadeInAnimation(
+                        child: ListTile(
+                          leading: CircleAvatar(
+                            backgroundImage: contact.profilePicture != null
+                                ? FileImage(File(contact.profilePicture!))
+                                : null,
+                            child: contact.profilePicture == null
+                                ? const Icon(Icons.person)
+                                : null,
+                          ),
+                          title: Text(contact.name),
+                          subtitle: Text(contact.peerId),
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
             );
           } else if (snapshot.hasError) {
             return Center(
