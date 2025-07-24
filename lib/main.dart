@@ -9,10 +9,11 @@ import 'package:decentralized_chat/settings_screen.dart';
 import 'package:decentralized_chat/theme.dart';
 import 'package:decentralized_chat/transitions.dart';
 import 'package:flutter/material.dart';
+import 'package:encrypt/encrypt.dart';
 import 'package:decentralized_chat/database.dart';
 import 'package:decentralized_chat/network.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import 'package:flutter_animator/flutter_animator.dart';
+import 'package:flutter_animator/flutter_animator.dart' as animator;
 import 'package:flutter_speed_dial/flutter_speed_dial.dart';
 import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 import 'package:glass_kit/glass_kit.dart';
@@ -30,6 +31,24 @@ void main() async {
     print(details);
   };
   runApp(const MyApp());
+}
+class Crypto {
+  final Encrypter encrypter;
+  final IV iv;
+
+  Crypto(String key)
+      : iv = IV.fromLength(16),
+        encrypter = Encrypter(AES(Key.fromUtf8(key)));
+
+  String encrypt(String plaintext) {
+    final encrypted = encrypter.encrypt(plaintext, iv: iv);
+    return encrypted.base64;
+  }
+
+  String decrypt(String ciphertext) {
+    final decrypted = encrypter.decrypt64(ciphertext, iv: iv);
+    return decrypted;
+  }
 }
 
 class MyApp extends StatefulWidget {
@@ -88,14 +107,14 @@ class _MyHomePageState extends State<MyHomePage> {
   final dbHelper = DatabaseHelper.instance;
   final network = Network();
   final picker = ImagePicker();
-  final record = Record();
+  final record = AudioRecorder();
   final audioPlayer = AudioPlayer();
   bool _isRecording = false;
   String? _audioPath;
   String _username = 'user';
-  final _crypt = Cryptor(algo: Algo.aes, key: 'a' * 32, iv: 'b' * 16);
-  final GlobalKey<AnimatorWidgetState> _sendButtonKey =
-      GlobalKey<AnimatorWidgetState>();
+  final GlobalKey<animator.AnimatorWidgetState> _sendButtonKey =
+      GlobalKey<animator.AnimatorWidgetState>();
+  final crypto = Crypto('a' * 32);
 
   @override
   void initState() {
@@ -145,11 +164,11 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   String _encryptMessage(String message) {
-    return _crypt.encrypt(inp: '$_username: $message');
+    return crypto.encrypt('$_username: $message');
   }
 
   String _decryptMessage(String message) {
-    return _crypt.decrypt(enc: message);
+    return crypto.decrypt(message);
   }
 
   @override
@@ -285,34 +304,34 @@ class _MyHomePageState extends State<MyHomePage> {
                       }
                     },
                   ),
-                  IconButton(
-                    icon: Icon(_isRecording ? Icons.stop : Icons.mic),
-                    onPressed: () async {
-                      try {
-                        if (await record.isRecording()) {
-                          final path = await record.stop();
-                          setState(() {
-                            _isRecording = false;
-                            _audioPath = path;
-                            _messages.add({
-                              'text': File(path!),
-                              'isMe': true,
-                              'timestamp': DateTime.now(),
-                            });
-                          });
-                        } else {
-                          if (await record.hasPermission()) {
-                            await record.start();
-                            setState(() {
-                              _isRecording = true;
-                            });
-                          }
-                        }
-                      } catch (e) {
-                        _showErrorDialog(e.toString());
-                      }
-                    },
-                  ),
+                    IconButton(
+    icon: Icon(_isRecording ? Icons.stop : Icons.mic),
+    onPressed: () async {
+      try {
+        if (await record.isRecording()) {
+          final path = await record.stop();
+          setState(() {
+            _isRecording = false;
+            _audioPath = path;
+            _messages.add({
+              'text': File(path!),
+              'isMe': true,
+              'timestamp': DateTime.now(),
+            });
+          });
+        } else {
+          if (await record.hasPermission()) {
+            await record.start();
+            setState(() {
+              _isRecording = true;
+            });
+          }
+        }
+      } catch (e) {
+        _showErrorDialog(e.toString());
+      }
+    },
+  );
                   Expanded(
                     child: TextField(
                       controller: _messageController,

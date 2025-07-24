@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:record/record.dart';
+import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:steel_crypt/steel_crypt.dart';
 import 'package:intl/intl.dart';

@@ -13,20 +13,22 @@ dependencies:
     sdk: flutter
 
   cupertino_icons: ^1.0.6
-  steel_crypt: ^4.0.0
+  web_socket_channel: ^3.0.3  
+  encrypt: ^5.0.3
+  steel_crypt: ^3.0.0
   sqflite: ^2.3.0
-  flutter_webrtc: ^0.9.46
+  flutter_webrtc: ^0.14.2 
   image_picker: ^1.0.4
-  audioplayers: ^5.2.1
-  record: ^5.0.1
-  intl: ^0.18.1
-  glass_kit: ^2.0.1
+  audioplayers: ^6.5.0 
+  record: ^5.2.1
+  intl: ^0.20.2  
+  glass_kit: ^4.0.1 
   flutter_animate: ^4.3.0
   animations: ^2.0.8
   flutter_staggered_animations: ^1.1.1
   flutter_speed_dial: ^7.0.0
   flutter_animator: ^3.2.2
-  p2plib: ^0.1.1
+  p2plib: ^2.2.2
 
 
 dev_dependencies:

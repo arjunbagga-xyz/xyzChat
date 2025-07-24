@@ -1,18 +1,20 @@
-import 'package:steel_crypt/steel_crypt.dart';
+import 'package:encrypt/encrypt.dart';
 
 class Crypto {
-  final String key;
-  final String iv;
+  final Encrypter encrypter;
+  final IV iv;
 
-  Crypto({required this.key, required this.iv});
+  Crypto(String key)
+      : iv = IV.fromLength(16),
+        encrypter = Encrypter(AES(Key.fromUtf8(key)));
 
   String encrypt(String plaintext) {
-    final encrypter = AesCrypt(key: key, iv: iv, padding: Padding.pkcs7);
-    return encrypter.encrypt(inp: plaintext);
+    final encrypted = encrypter.encrypt(plaintext, iv: iv);
+    return encrypted.base64;
   }
 
   String decrypt(String ciphertext) {
-    final decrypter = AesCrypt(key: key, iv: iv, padding: Padding.pkcs7);
-    return decrypter.decrypt(enc: ciphertext);
+    final decrypted = encrypter.decrypt64(ciphertext, iv: iv);
+    return decrypted;
   }
 }
